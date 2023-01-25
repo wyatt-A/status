@@ -12,7 +12,8 @@ use regex::{Captures, Regex};
 use utils;
 
 use status::pipe;
-use status::pipe::{Pipe, PipeRegistry, StatusArgs, StatusCheck};
+use status::pipe::{PipeStatus, PipeRegistry, StatusArgs, StatusCheck};
+
 
 
 fn main() {
@@ -21,48 +22,52 @@ fn main() {
     println!("Status Check");
     println!("{:?}",args);
 
-    let pipes = PipeRegistry::load();
+    let registered_pipes = PipeRegistry::load(Path::new("/Users/Wyatt/IdeaProjects/status/pipe_registry"));
+
+    println!("pipes = {:?}",registered_pipes);
 
 
-    let pipe_conf = match pipes.get(&args.last_pipe) {
+
+    let pipe_status = match registered_pipes.get(&args.last_pipe) {
         None => {
-            println!("available pipes: {:?}",pipes);
+            println!("available pipes: {:?}",registered_pipes);
             panic!("cannot find specified pipe {}",args.last_pipe);
         }
         Some(pipe_conf) => pipe_conf
     };
 
-    let p = Pipe::open(&pipe_conf);
 
 
-
-    // Look for specimen registration file (this should happen at scan time)
-    // let spec = Specimen {
-    //     id: args.specimen_id.clone(),
-    //     base_runno: String::from("N12345"),
-    //     pipe: p.,
-    //     runnos: vec![
-    //
-    //     ]
-    // };
-
-
-    let dummy_dir = vec![
-        String::from("N60197_m00"),
-        String::from(("N60197_m01")),
+    let pipe_status_args = vec![
+        String::from("N51016_m0"),
+        String::from("N51016_m1"),
+        String::from("N51016_m2"),
+        String::from("N51016_m3"),
+        String::from("N51016_m4"),
+        String::from("N51016_m5"),
+        String::from("N51016_m6"),
     ];
 
-    // forward checking of stages
-    for stage in &p.stages {
-        let stage_stat = stage.status(Path::new("/Users/Wyatt/scratch/co_reg_N60197_m00-inputs"),&dummy_dir);
-        println!("{}",stage.label);
-        println!("{:?}",stage_stat);
-    }
+    //let stat = pipe_status.stages[0].status(&pipe_status_args);
+    //todo( migrate this loop to a pipe status check prior to implementing stage=pipe lookup in pipe registry)
+    let base_runno = String::from("N51016");
+    //println!("{:?}",stat);
+    //forward checking of stages
+
+
+    pipe_status.status(&pipe_status_args,Some(base_runno.as_str()));
+
+    // for stage in &pipe_status.stages {
+    //     //todo(smartly pass base_runno when required)
+    //     let stage_stat = stage.status(&pipe_status_args,Some(base_runno.as_str()));
+    //     //todo(stop checking if no progress in stage)
+    //     println!("{}",stage.label);
+    //     println!("{:?}",stage_stat);
+    // }
 
 
 
 }
-
 
 
 #[test]
