@@ -47,14 +47,7 @@ impl PipeStatus {
 
 }
 
-#[derive(Serialize,Deserialize,Debug)]
-pub struct Stage {
-    pub label:String,
-    #[serde(with = "serde_regex")]
-    pub completion_file_pattern:Regex,
-    pub directory_pattern:String,
-    pub signature_type:SignatureType,
-}
+
 
 #[derive(Serialize,Deserialize,Debug)]
 pub enum SignatureType {
