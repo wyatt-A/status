@@ -42,7 +42,6 @@ impl RemoteConnection {
 
 
 
-
 impl RemoteSystem {
 
     pub fn new(host_name:&str,user_name:&str,local_pub_key:&Path) -> Self {
@@ -74,16 +73,31 @@ impl RemoteSystem {
 #[test]
 fn ssh_test() {
 
-    //ssh::enable_log();
+    ssh::enable_log();
 
 
     let remote_sys2 = RemoteSystem::new("civmcluster1","wa41",Path::new("/Users/Wyatt/.ssh/id_rsa"));
     let mut connection2 = remote_sys2.connect().unwrap();
 
 
-    let response = connection2.send_command("ls -la /privateShares/wa41/this_doesnt_exist");
+
+    let response = connection2.send_command("ls -la");
     print!("response: {}",response);
 
+
+
+
+    let mut cmd = std::process::Command::new("ssh");
+    cmd.args(vec![
+        "wa41@civmcluster1",
+        r"echo \$BIGGUS_DISKUS"
+    ]);
+
+    let out = cmd.output().unwrap();
+
+    
+
+    println!("{:?}",out.status.success())
 
 }
 

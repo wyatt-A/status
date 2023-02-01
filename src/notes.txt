@@ -1,0 +1,63 @@
+civm_status is composed of a client-side and a server-side application to gather information about the status of a specimen or run number
+
+the client is what the user interacts with on their local machine
+the server runs on remote computers and the local host to check the status of a single pipe
+
+the server returns either the status of the pipe, or diverts the responsibility back to the client to look
+elsewhere (ie ask another remote computer the status)
+
+this is not the most efficient, but it reduces the amount of connection checking required. ie the user of the
+local computer needs to connect to the multiple servers, instead of requiring servers to connect to servers. This will
+hopefully be easier to manage.
+
+There is one CLIENT and many SERVERS
+
+CLIENT:
+    gather user input
+    lookup required stage information
+        check preferred computer and connect
+        run the server-side process to request the pipe status
+            send the pipe status toml files
+            request the status
+            get response
+                (the server runs as much status checking as possible (ei until the preferred computer changes)
+                the response is the status and the last pipe status ran
+                the local host determines the next server to request status
+
+SERVER:
+    retrieve status toml files from client
+    run the status check until the preferred computer changes
+    send response back to client
+
+    ----------------------------------------
+
+CLIENT:
+    parse args (some known pipe,some data,configuration directory,output location for status response)
+    look at known pipe config and get preferred computer
+    if preferred computer is local, run status check
+    else transfer configs and do remote call on preferred computer, gather response
+
+    subr get_status(pipe,Option<stage>):
+        for each stage in pipe starting at <stage>:
+            if stage is a pipe:
+                get_status(pipe,)
+            else:
+                get stage status
+
+
+    get pipe status:
+        for each stage in pipe
+            get preferred computer
+            if preferred computer is this computer
+                get stage status:
+                    if stage is a pipe:
+                        get pipe status
+                    else:
+                        get stage status
+            else:
+                send pipe to remote computer
+                get stage status:
+                    if stage is a pipe:
+                        get pipe status
+                    else:
+                        get stage status
