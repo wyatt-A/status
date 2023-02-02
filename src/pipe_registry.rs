@@ -8,7 +8,7 @@ use serde::{Serialize, Deserialize};
 
 pub const PIPE_REGISTRY_FILE:&str = "/Users/Wyatt/IdeaProjects/status/pipe_registry";
 
-#[derive(Serialize,Deserialize,Debug)]
+#[derive(Serialize,Deserialize,Debug,Clone)]
 pub struct PipeRegistry {
     items:Vec<PathBuf>
 }

@@ -1,5 +1,6 @@
 use std::cell::RefCell;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::process::Command;
 use regex::Regex;
 use crate::status_check::{Status, StatusCheck, StatusType};
 use serde::{Serialize, Deserialize, Deserializer};
@@ -25,16 +26,14 @@ pub struct Stage {
     pub required_file_keywords:Option<Vec<String>>,
 }
 
-
-impl StatusCheck for Stage {
-    fn status(&self,_user_args:&StatusArgs,required_matches:&Vec<String>,base_runno:Option<&str>) -> Status {
+impl Stage {
+    fn file_check(&self,_user_args:&StatusArgs,required_matches:&Vec<String>,base_runno:Option<&str>) -> Status {
         use SignatureType::*;
 
+        println!("stage label: {}",self.label);
 
         let re = Regex::new(r"(\$\{[[:alnum:]_]+\})").unwrap();
         let big_disk = std::env::var("BIGGUS_DISKUS").expect("BIGGUS_DISKUS is not set");
-
-
 
         let mut the_dir = self.directory_pattern.clone();
         re.captures_iter(&self.directory_pattern).for_each(|captures|{
@@ -67,8 +66,7 @@ impl StatusCheck for Stage {
         // directory should be valid now... if its missing we cant check?... or this stage has 0 progress
         // return not started?
 
-
-        println!("resolved directory pattern :{:?}",the_dir);
+        println!("\tresolved directory pattern :{:?}",the_dir);
 
         // trim required matches based on signature type=
         let required_matches = match &self.signature_type {
@@ -95,7 +93,15 @@ impl StatusCheck for Stage {
 
         };
 
-        let contents = std::fs::read_dir(&the_dir).expect(&format!("{} doesn't exist",the_dir));
+        let contents = match std::fs::read_dir(&the_dir) {
+            Err(_) => return Status{
+                label: self.label.clone(),
+                progress: StatusType::NotStarted,
+                children: vec![]
+            },
+            Ok(contents) => contents
+        };
+
         let mut included = vec![];
         for thing in contents {
             let tp = thing.unwrap();
@@ -106,7 +112,8 @@ impl StatusCheck for Stage {
             }
         }
 
-        println!("considered items: {:?}",included);
+        println!("\t\tconsidered items: {:?}",included);
+        println!("\t\tpattern: {:?}",self.completion_file_pattern);
 
         included.sort();
         let glob = included.join("/");
@@ -140,4 +147,84 @@ impl StatusCheck for Stage {
             }
         }
     }
+}
+
+
+
+impl StatusCheck for Stage {
+
+    fn status(&self,user_args:&StatusArgs,required_matches:&Vec<String>,base_runno:Option<&str>) -> Status {
+        let the_status = match &self.preferred_computer {
+            Some(computers) => {
+                let mut args = user_args.clone();
+                args.output_file = Some(PathBuf::from(r"\$HOME/.spec_status_config_tmp/PIPENAME"));
+                let remote_temp_dir = Path::new(r"\$HOME/.spec_status_config_tmp");
+                args.config_dir = Some(remote_temp_dir.to_owned());
+                args.stage = Some(self.label.clone());
+
+                let mut temp_status = Status {
+                    label: "dummy".to_string(),
+                    progress: StatusType::NotStarted,
+                    children: vec![]
+                };
+
+                for computer in computers {
+                    match &user_args.config_dir {
+                        Some(conf_dir) => {
+                            // todo!(use make temp to get a directory)
+
+                            let mut cmd = Command::new("scp");
+                            cmd.args(vec![
+                                "-pr",
+                                &format!("{:?}", conf_dir),
+                                computer.as_str(),
+                                &format!(":{:?}", remote_temp_dir)
+                            ]);
+
+                            if !cmd.output().expect("failed to launch scp").status.success() {
+                                panic!("scp failed");
+                            }
+                        }
+                        None => {}
+                    }
+
+                    let bin_name = std::env::current_exe().unwrap();
+                    let bin_name = bin_name.file_name().unwrap().to_str().unwrap();
+                    // run remote check
+                    Command::new("ssh").args(vec![
+                        computer.as_str(),
+                        bin_name,
+                        args.to_string().as_str()
+                    ]);
+                    // collect status)
+                    //todo(define local TEMP status file in cool way)
+                    let local_status_file = Path::new(r"$HOME/.spec_tatus_config_tmp/incoming");
+                    let mut cmd = Command::new("scp").args(vec![
+                        "-p",
+                        computer.as_str(),
+                        &format!(":{:?}", args.config_dir),
+                        &format!("{:?}", local_status_file)
+                    ]);
+
+                    let s = utils::read_to_string(local_status_file,"json");
+                    let stat:Status = serde_json::from_str(&s).expect("cannot deserialize struct");
+                    temp_status = stat.children[0].clone();
+
+                    match &temp_status.progress{
+                        StatusType::NotStarted => {}
+                        _=> break
+                    }
+
+                }
+                temp_status
+            }
+            None => {
+                let stat = self.file_check(&user_args, &required_matches, base_runno);
+                stat
+            }
+        };
+        println!("\tProgress {:?}",the_status.progress);
+        the_status
+    }
+
 }

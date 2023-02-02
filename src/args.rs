@@ -33,4 +33,29 @@ impl StatusArgs {
             }
         )
     }
+
+
+    pub fn to_vec(&self) -> Vec<String> {
+
+        let mut out = vec![
+            self.specimen_id.clone(),
+            self.last_pipe.clone(),
+        ];
+
+            match &self.stage {
+                Some(stage) => out.push(format!("--stage={}",stage)),
+                None => {  }
+            }
+            match &self.config_dir {
+                Some(config_dir) => out.push(format!("--config-dir={}",config_dir.to_str().unwrap())),
+                None => {  }
+            }
+            match &self.output_file {
+                Some(output_file) =>{
+                    out.push(format!("--output-file={}",output_file.to_str().unwrap()))
+                } ,
+                None => {  }
+            }
+        out
+    }
 }
