@@ -1,10 +1,24 @@
 use crate::args::StatusArgs;
 
+
+// pub enum Status {
+//     Complete,
+//     InProgress(f32),
+//     NotStarted,
+// }
+
 #[derive(Debug)]
-pub enum Status {
-    Complete,
+pub enum StatusType {
     InProgress(f32),
     NotStarted,
+    Complete,
+}
+
+#[derive(Debug)]
+pub struct Status {
+    pub label:String,
+    pub progress:StatusType,
+    pub children:Vec<Status>
 }
 
 pub trait StatusCheck {

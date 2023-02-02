@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::path::PathBuf;
 use regex::Regex;
-use crate::status_check::{Status, StatusCheck};
+use crate::status_check::{Status, StatusCheck, StatusType};
 use serde::{Serialize, Deserialize, Deserializer};
 use crate::args::StatusArgs;
 
@@ -29,24 +29,6 @@ pub struct Stage {
 impl StatusCheck for Stage {
     fn status(&self,_user_args:&StatusArgs,required_matches:&Vec<String>,base_runno:Option<&str>) -> Status {
         use SignatureType::*;
-
-        //self.directory_pattern
-
-
-        //
-        // is the host name matched by preferred computer?
-        // let computer = match &self.preferred_computer {
-        //     None => {
-        //         vec![Computer::Local]
-        //     }
-        //     Some(preferred_hosts) => {
-        //         // check and handle the case where the remote host is actually the local host
-        //         preferred_hosts.iter().map(|host| Computer::Remote(host.clone())).collect()
-        //     }
-        // };
-
-
-
 
 
         let re = Regex::new(r"(\$\{[[:alnum:]_]+\})").unwrap();
@@ -138,15 +120,24 @@ impl StatusCheck for Stage {
             }
         }
 
-
         return if count == required_matches.len() {
-            Status::Complete
+            Status{
+                label: self.label.clone(),
+                progress: StatusType::Complete,
+                children: vec![]
+            }
         } else if count == 0 {
-            Status::NotStarted
-
+            Status{
+                label: self.label.clone(),
+                progress: StatusType::NotStarted,
+                children: vec![]
+            }
         } else {
-            Status::InProgress(count as f32 / required_matches.len() as f32)
+            Status{
+                label: self.label.clone(),
+                progress: StatusType::InProgress(count as f32 / required_matches.len() as f32),
+                children: vec![]
+            }
         }
-
     }
 }

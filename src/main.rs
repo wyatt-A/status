@@ -1,7 +1,7 @@
 /* CIVM specimen status checker draft */
 
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use serde::{Serialize, Deserialize, Deserializer};
@@ -14,7 +14,7 @@ use status::pipe_registry::PipeRegistry;
 use status::status_check::StatusCheck;
 use status::pipe_status;
 use status::pipe_status::PipeStatusConfig;
-
+use status::stage::Stage;
 
 
 fn main() {
@@ -50,7 +50,12 @@ fn main() {
     let base_runno = args.specimen_id.clone();
     //println!("{:?}",stat);
     //forward checking of stages
-    pipe_status_conf.status(&args,&runno_list,Some(base_runno.as_str()));
+    let stat = pipe_status_conf.status(&args,&runno_list,Some(base_runno.as_str()));
+
+
+    println!("{:?}",stat);
+
+
     //     //todo(smartly pass base_runno when required)
     //     let stage_stat = stage.status(&pipe_status_args,Some(base_runno.as_str()));
     //     //todo(stop checking if no progress in stage)
