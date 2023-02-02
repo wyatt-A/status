@@ -1,0 +1,4 @@
+[[servers]]
+hostname = "civmcluster1"
+username = "wa41"
+pubkey = "~/.ssh/id_rsa.pub"
