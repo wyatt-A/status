@@ -12,8 +12,6 @@ signature_type = 'ManyToOne'
 [[stages]]
 label = 'make_4d'
 preferred_computer = ["civmcluster1"]
-#todo!(make this possible as some point)
-#completion_file_pattern = 'results/nii4D\$\{BASE\}.nii$'
 completion_file_pattern = 'results/nii4D_[^_]+nii$'
 directory_pattern = '${BIGGUS_DISKUS}/${PREFIX}${SEP}${BASE}NLSAM${SEP}${PROGRAM}${SEP}${SUFFIX}-results'
 signature_type = 'ManyToOne'
@@ -21,8 +19,6 @@ signature_type = 'ManyToOne'
 [[stages]]
 label = 'make_4d_nlsam'
 preferred_computer = ["civmcluster1"]
-#todo!(make this possible as some point)
-#completion_file_pattern = 'results/nii4D\$\{BASE\}.nii$'
 completion_file_pattern = 'results/nii4D_[^_]+?NLSAM.nii$'
 directory_pattern = '${BIGGUS_DISKUS}/${PREFIX}${SEP}${BASE}NLSAM${SEP}${PROGRAM}${SEP}${SUFFIX}-results'
 signature_type = 'ManyToOne'
@@ -32,14 +28,12 @@ label = 'dsi_studio_source'
 completion_file_pattern = 'work/.*src(.gz)?$'
 directory_pattern = '${BIGGUS_DISKUS}/${PREFIX}${SEP}${BASE}NLSAM${SEP}${PROGRAM}${SEP}${SUFFIX}-work'
 signature_type = 'OneToOne'
-#todo! deal with files which can be in either place (work/results)
 
 [[stages]]
 label = 'dsi_studio_fib'
 completion_file_pattern = 'results/.*fib(.gz)?$'
 directory_pattern = '${BIGGUS_DISKUS}/${PREFIX}${SEP}${BASE}NLSAM${SEP}${PROGRAM}${SEP}${SUFFIX}-results'
 signature_type = 'OneToOne'
-#todo! support multiple fib outputs
 
 [[stages]]
 label = 'dsi_studio_export'

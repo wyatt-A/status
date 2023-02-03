@@ -15,6 +15,8 @@ pub struct StatusArgs {
     pub pipe_registry:Option<PathBuf>,
     #[clap(long)]
     pub BIGGUS_DISKUS:Option<String>,
+    #[clap(short,long)]
+    pub forward_check:Option<bool>,
 }
 
 

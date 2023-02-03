@@ -119,11 +119,7 @@ impl StatusCheck for PipeStatusConfig {
                 stages.clone()
             }
         };
-
-
-
-
-        let reverse = true;
+        let reverse = !user_args.forward_check.unwrap_or(false);
         let mut pipe_progress:f32 = 1.0;
         if reverse {
             stages.reverse();
