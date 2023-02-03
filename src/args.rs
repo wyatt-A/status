@@ -11,10 +11,32 @@ pub struct StatusArgs {
     pub config_dir:Option<PathBuf>,
     #[clap(short, long)]
     pub output_file:Option<PathBuf>,
+    #[clap(short, long)]
+    pub pipe_registry:Option<PathBuf>,
+    #[clap(long)]
+    pub BIGGUS_DISKUS:Option<String>,
 }
 
 
 impl StatusArgs {
+
+    pub fn biggus_diskus(&self) -> Option<(String,String)> {
+        match &self.BIGGUS_DISKUS {
+            Some(arg) => {
+                let arg = arg.to_string();
+                let split:Vec<&str> = arg.split(":").collect();
+                if split.len()  != 2 {
+                    panic!("BIGGUS_DISKUS must contain a : for")
+                }
+                Some((
+                    split[0].to_string(),
+                    split[1].to_string()
+                    ))
+            }
+            None => None
+        }
+    }
+
     pub fn to_string(&self) -> String {
         format!("{} {}{}{}{}",
             self.specimen_id,
@@ -56,6 +78,18 @@ impl StatusArgs {
                 } ,
                 None => {  }
             }
+        match &self.pipe_registry {
+            Some(pipe_registry) =>{
+                out.push(format!("--pipe-registry={}",pipe_registry.to_str().unwrap()))
+            } ,
+            None => {  }
+        }
+        match &self.BIGGUS_DISKUS {
+            Some(BIGGUS_DISKUS) =>{
+                out.push(format!("--biggus-diskus={}",BIGGUS_DISKUS))
+            } ,
+            None => {  }
+        }
         out
     }
 }

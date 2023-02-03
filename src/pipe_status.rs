@@ -10,10 +10,7 @@ use crate::args::StatusArgs;
 use crate::pipe_registry::{PIPE_REGISTRY_FILE, PipeRegistry};
 use crate::stage::{SignatureType, Stage};
 use crate::status_check::{Status, StatusCheck, StatusType};
-
-
-
-
+use rand::Rng;
 
 #[derive(Serialize,Deserialize,Debug,Clone)]
 struct StageStatus {
@@ -26,8 +23,6 @@ struct PipeStatus {
     val:f32,
 }
 
-
-
 #[derive(Serialize,Deserialize,Debug,Clone)]
 pub struct PipeStatusConfig {
     // a unit of work with a defined point completion
@@ -38,11 +33,14 @@ pub struct PipeStatusConfig {
     registry:Option<HashMap<String, PipeStatusConfig>>,
 }
 
+
+
+
 impl PipeStatusConfig {
 
     pub fn open(pipe_conf:&Path) -> Self {
         let string = utils::read_to_string(pipe_conf,"toml");
-        let mut pipe_conf: PipeStatusConfig = toml::from_str(&string).expect("cannot deserialize pipe!");
+        let mut pipe_conf: PipeStatusConfig = toml::from_str(&string).expect(&format!("cannot deserialize {:?}",string));
 
         pipe_conf.stages.iter_mut().for_each(|stage|{
             if pipe_conf.preferred_computer.is_some(){
@@ -95,27 +93,22 @@ impl PipeStatusConfig {
         let str = toml::to_string(&p).expect("cannot deserialize struct");
         utils::write_to_file(pipe_conf,"txt",&str);
     }
-
 }
 
-// impl Stage {
-//     pub fn regex(&self) -> Regex{
-//         Regex::new(&self.completion_file_pattern).expect("invalid regex!")
-//     }
-// }
-
 impl StatusCheck for PipeStatusConfig {
-    fn status(&self,user_args:&StatusArgs ,required_matches: &Vec<String>, base_runno: Option<&str>) -> Status {
+    fn status(&self,user_args:&StatusArgs,required_matches: &Vec<String>, base_runno: Option<&str>) -> Status {
 
+        // the complete pipeline status that will be updated and returned
         let mut total_pipe_status = Status{
             label: self.label.clone(),
             progress: StatusType::NotStarted,
             children: vec![]
         };
 
+        // get copy of stages to make
         let stages = self.stages.clone();
         let stages_hash = self.to_hash();
-        let stages:Vec<Stage> = match &user_args.stage {
+        let mut stages:Vec<Stage> = match &user_args.stage {
             Some(stage_label) => {
                 match stages_hash.get(stage_label.as_str()) {
                     Some(stage) => vec![stage.clone()],
@@ -127,79 +120,96 @@ impl StatusCheck for PipeStatusConfig {
             }
         };
 
-        let mut n_complete:f32 = 0.0;
 
 
-        if stages.len() == 1 {
-            println!("THE STAGE LENGTH IS 1!!!");
+
+        let reverse = true;
+        let mut pipe_progress:f32 = 1.0;
+        if reverse {
+            stages.reverse();
         }
 
+        //let mut n_complete:f32 = 0.0;
         for stage in &stages {
 
+            // get the status for this stage assuming it is just a stage (not a pipe)
             let mut stat = stage.status(user_args,required_matches,base_runno.clone());
 
-            println!("status: {:?}",stat);
-
             match &stat.progress {
+
+
                 StatusType::NotStarted => {
                     // if stage is pipe, recurse
+                    // configure output status file and input args
                     if self.registry.clone().unwrap().get(stage.label.as_str()).is_some() {
-
                         let mut these_args = user_args.clone();
                         these_args.last_pipe = stage.label.clone();
                         //these_args.output_file = Some(PathBuf::from(r"$HOME/.spec_status_config/PIPENAME"));
-                        these_args.output_file = Some(PathBuf::from(r"/Users/Wyatt/.spec_status_config/PIPENAME"));
+
+                        let home_dir = std::env::home_dir().expect("home dir cannot be fetched. Is the function deprecated?");
+
+                        // random number for filename to out of overwrite paranoia
+                        let mut rng = rand::thread_rng();
+                        let n1: u8 = rng.gen();
+
+                        these_args.output_file = Some(home_dir.join(".pipe_status").join(format!("{}{}",stage.label.as_str(),n1.to_string().as_str())));
                         these_args.stage = None;
                         //these_args.output_file =
-                        let mut string_args = these_args.to_vec();
+                        let string_args = these_args.to_vec();
                         let this_exe = std::env::current_exe().unwrap();
-                        let this_exe = this_exe.file_name().unwrap().to_str().unwrap();
-
-
-                        let mut cmd = Command::new(this_exe);
+                        //let this_exe = this_exe.file_name().unwrap().to_str().unwrap();
+                        let mut cmd = Command::new(&this_exe);
                         cmd.args(string_args);
-
-                        // let mut cmd = Command::new("ssh");
-                        // string_args.insert(0,"localhost".to_string());
-                        // string_args.insert(1,this_exe.to_owned());
-                        // cmd.args(string_args);
-
-                        if !cmd.output().expect(&format!("failed to launch {}",this_exe)).status.success() {
-
-                            println!("{:?}",cmd);
-
+                        // launch recursive call
+                        if !cmd.output().expect(&format!("failed to launch {}",this_exe.to_str().unwrap())).status.success() {
+                            println!("tried to run: {:?}",cmd);
                             panic!("recursive call failed");
                         }
-
-
-                        //todo(load status)
+                        // collect output
                         let s = utils::read_to_string(&these_args.output_file.clone().unwrap(),"json");
                         stat = serde_json::from_str(s.as_str()).expect("cannot deserialize struct");
-                        println!("statusP: {:?}",stat);
+
+                        // delete file after read
+                        std::fs::remove_file(&these_args.output_file.clone().unwrap().with_extension("json")).expect(&format!("cannot remove {:?}",these_args.output_file));
+
+                        println!("statusP: {}",s.as_str());
+                    }else {
+                        println!("{} is not started, but its not a pipe",stage.label);
                     }
                 }
                 _=> {
-                    println!("I AM NOT A PIPE!");
-
+                    println!("{} returned with status {}",self.label,serde_json::to_string_pretty(&stat).unwrap());
                 }
             }
-
 
             //todo(add weighting to configs, and weight the progress value here)
             let stage_weight=1.0;
 
-            let n_stages = stages.len() as f32;
-            println!("n_stages  ={}",n_stages);
+            //let n_stages = stages.len() as f32;
+            //println!("n_stages  ={}",n_stages);
 
-            let mut normalized_progress =  (stat.progress * stage_weight);// / stages.len() as f32;
+            //let mut normalized_progress =  (stat.progress * stage_weight);// / stages.len() as f32;
+            //normalized_progress = normalized_progress/ n_stages;
+            //println!("normalized_progress  ={}",normalized_progress.to_float());
+            if reverse{
+                pipe_progress = pipe_progress - 1.0 + stat.progress.to_float();
 
-            normalized_progress = normalized_progress/ n_stages;
+                match stat.progress {
+                    StatusType::Complete => {
+                        total_pipe_status.children.push(stat);
+                        break
+                    }
+                    _=> {}
+                }
+            }else {
+                total_pipe_status.progress = total_pipe_status.progress + (stat.progress * stage_weight) / stages.len() as f32;
 
-            println!("normalized_progress  ={}",normalized_progress.to_float());
-
-            total_pipe_status.progress = total_pipe_status.progress + (stat.progress * stage_weight) / stages.len() as f32;
-
+            }
             total_pipe_status.children.push(stat);
+        }
+        if reverse {
+            total_pipe_status.children.reverse();
+            total_pipe_status.progress = StatusType::InProgress(pipe_progress);
         }
         total_pipe_status
     }

@@ -16,16 +16,32 @@ pub struct PipeRegistry {
 impl PipeRegistry {
     pub fn load(pipe_registery:&Path) -> HashMap<String, PipeStatusConfig> {
         let txt = utils::read_to_string(pipe_registery,"toml");
-        let reg:PipeRegistry = toml::from_str(&txt).expect("unable to deserialuze. File is corrupt");
+        let reg:PipeRegistry = toml::from_str(&txt).expect("unable to deserialize. File is corrupt");
 
-        println!("{:?}",reg);
+        //println!("{:?}",reg);
         reg.resolve()
+    }
+
+    pub fn load_dir(config_dir:&Path) -> HashMap<String, PipeStatusConfig> {
+        let mut resolved_status = HashMap::<String, PipeStatusConfig>::new();
+        let files = utils::find_files(config_dir,"toml",true);
+        match files {
+            Some(files) => {
+                for file in &files {
+                    let ps = PipeStatusConfig::open(file);
+                    resolved_status.insert(ps.label.clone(),ps);
+                }
+            }
+            None => {
+                panic!("no config files found in {}",config_dir.to_str().unwrap());
+            }
+        }
+        resolved_status
     }
 
     pub fn resolve(&self) -> HashMap<String, PipeStatusConfig> {
         let mut resolved_status = HashMap::<String, PipeStatusConfig>::new();
         for exec in &self.items {
-
             let exec_path = Path::new(exec);
             match exec_path.is_file(){
                 true => {

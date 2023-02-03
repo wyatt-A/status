@@ -17,18 +17,35 @@ use status::pipe_status;
 use status::pipe_status::PipeStatusConfig;
 use status::stage::Stage;
 
-
 fn main() {
     let args:StatusArgs = StatusArgs::parse();
 
     // specimen
-    println!("Status Check");
-    println!("{:?}",args);
-
-    let registered_pipes = PipeRegistry::load(Path::new("/Users/Wyatt/IdeaProjects/status/pipe_registry"));
+    //println!("Status Check");
+    //println!("{:?}",args);
 
 
-    println!("pipes = {:?}",registered_pipes);
+    // check that big disk args is correct
+    args.biggus_diskus();
+
+    let status_dir = std::env::home_dir().expect("home dir cannot be fetched. Is the function deprecated?").join(".pipe_status");
+
+    if !status_dir.exists() {
+        std::fs::create_dir(&status_dir).expect(&format!("cannot create {:?}",status_dir));
+    }
+
+
+    let registered_pipes = match &args.config_dir {
+        Some(config_dir) => {
+            PipeRegistry::load_dir(config_dir)
+        }
+        None => {
+            let pipe_registry_file = args.clone().pipe_registry.unwrap_or(PathBuf::from("/Users/Wyatt/IdeaProjects/status/pipe_configs/pipe_registry"));
+            PipeRegistry::load(&pipe_registry_file)
+        }
+    };
+
+    //println!("pipes = {:?}",registered_pipes);
 
     let pipe_status_conf = match registered_pipes.get(&args.last_pipe) {
         Some(pipe_conf) => pipe_conf,
@@ -42,20 +59,29 @@ fn main() {
 
     pipe_status_conf.set_registry(&registered_pipes);
 
-    // update liset for S69478
-    let runno_list:Vec<String> = "N51016_m0,N51016_m1,N51016_m2,N51016_m3,N51016_m4,N51016_m5,N51016_m6"
-        .to_string()
-        .split(",")
-        .map(|str| str.to_string())
-        .collect();
 
-    //println!("{:?}",runno_list);
-
-    //let stat = pipe_status.stages[0].status(&pipe_status_args);
-    //todo decode specimen id and run number and volume runno listing.
     let base_runno = args.specimen_id.clone();
-    //println!("{:?}",stat);
-    //forward checking of stages
+
+    // try to get a list file from big disk to help with runno expansion
+    let big_disk = std::env::var("BIGGUS_DISKUS").expect("BIGGUS_DISKUS is not set");
+
+    let list_file = Path::new(&big_disk).join(&base_runno).with_extension("list");
+
+    let runno_list:Vec<String> = match list_file.exists(){
+        true => {
+            println!("LIST FILE FOUND!");
+            let s = utils::read_to_string(&list_file,"list");
+            let re = regex::Regex::new(r",|\s+").unwrap();
+            re.split(s.as_str()).map(|s| s.to_string()).collect()
+        }
+        false => {
+            vec![]
+        }
+    };
+
+
+    println!("running status check for {} ...",pipe_status_conf.label);
+
     let stat = pipe_status_conf.status(&args,&runno_list,Some(base_runno.as_str()));
 
     // write status to file if the output is defined
@@ -70,13 +96,7 @@ fn main() {
         }
         _=> {}
     }
-
-    println!("{:?}",stat);
-
-    //     //todo(smartly pass base_runno when required)
-    //     let stage_stat = stage.status(&pipe_status_args,Some(base_runno.as_str()));
-    //     //todo(stop checking if no progress in stage)
-    //     println!("{}",stage.label);
-    //     println!("{:?}",stage_stat);
-    // }
+    println!("--------------------FINAL STATUS OUTPUT----------------------");
+    println!("{}",serde_json::to_string_pretty(&stat).unwrap());
 }
+
