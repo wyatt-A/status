@@ -29,7 +29,7 @@ pub struct Stage {
 }
 
 impl Stage {
-    fn file_check(&self, user_args:&StatusArgs, required_matches:&Vec<String>, base_runno:Option<&str>) -> Status {
+    pub fn file_check(&self, user_args:&StatusArgs, required_matches:&Vec<String>, base_runno:Option<String>) -> Status {
         use SignatureType::*;
 
         println!("running file check ...");
@@ -74,7 +74,7 @@ impl Stage {
                     the_dir = the_dir.replace(&format!("{}",&captures[cap_idx]),"dsi_studio");
                 }
                 else if captures[cap_idx].eq("${BASE}"){
-                    the_dir = the_dir.replace(&format!("{}",&captures[cap_idx]),&base_runno.clone().unwrap_or("BASE_RUNNO"));
+                    the_dir = the_dir.replace(&format!("{}",&captures[cap_idx]),&base_runno.clone().unwrap_or("BASE_RUNNO".to_string()));
                 }
                 else if captures[cap_idx].eq("${SEP}"){
                     the_dir = the_dir.replace(&format!("{}",&captures[cap_idx]),"");
@@ -174,7 +174,7 @@ impl Stage {
 
 impl StatusCheck for Stage {
 
-    fn status(&self,user_args:&StatusArgs,required_matches:&Vec<String>,base_runno:Option<&str>) -> Status {
+    fn status(&self, user_args:&StatusArgs, required_matches:&Vec<String>, base_runno: Option<String>) -> Status {
 
         println!("running stage status for {} ...",self.label);
 

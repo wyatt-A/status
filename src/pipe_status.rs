@@ -52,6 +52,11 @@ impl PipeStatusConfig {
 
     }
 
+    pub fn get_stage(&self,stage_label:&str) -> Stage {
+        let m = self.to_hash();
+        m.get(stage_label).expect(&format!("stage label {} doesn't exist in {}",stage_label,self.label)).clone()
+    }
+
     pub fn to_hash(&self) -> BTreeMap<String,Stage> {
         let mut map = BTreeMap::<String,Stage>::new();
         for stage in &self.stages {
@@ -96,7 +101,7 @@ impl PipeStatusConfig {
 }
 
 impl StatusCheck for PipeStatusConfig {
-    fn status(&self,user_args:&StatusArgs,required_matches: &Vec<String>, base_runno: Option<&str>) -> Status {
+    fn status(&self, user_args:&StatusArgs, required_matches: &Vec<String>, base_runno: Option<String>) -> Status {
 
         // the complete pipeline status that will be updated and returned
         let mut total_pipe_status = Status{

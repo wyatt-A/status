@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
+use serde::{Deserialize, Serialize};
 
-#[derive(clap::Parser,Debug,Clone)]
+#[derive(clap::Parser,Debug,Clone,Serialize,Deserialize)]
 pub struct StatusArgs {
     pub specimen_id:String,
     pub last_pipe:String,

@@ -137,5 +137,5 @@ impl ops::Div<f32> for StatusType {
 }
 
 pub trait StatusCheck {
-    fn status(&self,user_args:&StatusArgs ,required_matches: &Vec<String>, base_runno: Option<&str>) -> Status;
+    fn status(&self, user_args:&StatusArgs, required_matches: &Vec<String>, base_runno: Option<String>) -> Status;
 }
