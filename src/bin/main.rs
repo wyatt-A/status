@@ -82,7 +82,7 @@ fn main() {
 
     println!("running status check for {} ...",pipe_status_conf.label);
 
-    let stat = pipe_status_conf.status(&args,&runno_list,Some(base_runno.as_str()));
+    let stat = pipe_status_conf.status(&args,&runno_list,Some(base_runno));
 
     // write status to file if the output is defined
     match &args.output_file {

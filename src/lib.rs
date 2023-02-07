@@ -1,3 +1,5 @@
+extern crate core;
+
 pub mod pipe_status;
 pub mod remote_system;
 pub mod stage;

@@ -1,3 +1,8 @@
+/*
+The server checks for local files defined in a stage and reports back via a json string
+ */
+
+
 use serde_json;
 use status::client::Request;
 use clap::Parser;
@@ -14,7 +19,7 @@ fn main(){
     let args:ServerArgs = ServerArgs::parse();
     let request:Request = serde_json::from_str(&args.request).expect("problem loading request");
 
-    let pipe = request.configs.get_pipe(&request.pipe);
+    let pipe = request.configs.get_pipe(&request.pipe).unwrap();
     let stage = pipe.get_stage(&request.stage);
 
     let status = stage.file_check(&request.status_args,&request.required_matches,request.base_runno.clone());

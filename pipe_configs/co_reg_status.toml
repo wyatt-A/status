@@ -5,6 +5,7 @@ label = "make_header"
 completion_file_pattern = "inputs/.*nhdr"
 directory_pattern = "${BIGGUS_DISKUS}/co_reg_${PARAM0}-inputs"
 signature_type = "ManyToMany"
+preferred_computer = ["civmcluster1"]
 
 [[stages]]
 label = "ants_registration"

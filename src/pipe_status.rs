@@ -11,6 +11,8 @@ use crate::pipe_registry::{PIPE_REGISTRY_FILE, PipeRegistry};
 use crate::stage::{SignatureType, Stage};
 use crate::status_check::{Status, StatusCheck, StatusType};
 use rand::Rng;
+use crate::client::{ConfigCollection, Request, Response};
+use crate::client::Response::Status;
 
 #[derive(Serialize,Deserialize,Debug,Clone)]
 struct StageStatus {
@@ -38,23 +40,88 @@ pub struct PipeStatusConfig {
 
 impl PipeStatusConfig {
 
+
+
+    pub fn get_status(&self) -> Status {
+
+
+        for stage in &self.stages {
+            match &stage.preferred_computer {
+                Some(computers) => {
+                    // build a request
+
+                    let mut req_args = args.clone();
+                    req_args.stage = Some(stage.label.clone());
+
+                    let r = Request{
+                        configs: config_collection.clone(),
+                        pipe: "".to_string(),
+                        stage: "".to_string(),
+                        status_args: req_args,
+                        required_matches: vec![],
+                        base_runno: None
+                    };
+
+                    // get handle to ssh session for computer
+                    //let this_computer = utils::computer_name();
+
+                    for computer in computers {
+                        let serv = known_servers.get_mut(computer).unwrap();
+                        let serv =
+                        let resp = serv.send_request(&r).unwrap();
+                        match resp {
+                            Response::Error => {
+                                panic!("response returned an error");
+                            }
+                            Response::Status(stat) => {
+                                println!("{:?}",stat);
+
+                                // if the status is incomplete and it is also a pipe, recurse
+
+                            }
+                        }
+                    }
+                }
+                None => {}
+            }
+        }
+
+        Status
+    }
+
+
+
     pub fn open(pipe_conf:&Path) -> Self {
         let string = utils::read_to_string(pipe_conf,"toml");
         let mut pipe_conf: PipeStatusConfig = toml::from_str(&string).expect(&format!("cannot deserialize {:?}",string));
-
         pipe_conf.stages.iter_mut().for_each(|stage|{
             if pipe_conf.preferred_computer.is_some(){
                 stage.preferred_computer.get_or_insert(pipe_conf.preferred_computer.clone().unwrap());
             }
         });
-
         pipe_conf
-
     }
 
     pub fn get_stage(&self,stage_label:&str) -> Stage {
         let m = self.to_hash();
         m.get(stage_label).expect(&format!("stage label {} doesn't exist in {}",stage_label,self.label)).clone()
+    }
+
+    pub fn get_stages(&self,conf_collection:&ConfigCollection) -> Vec<Stage> {
+        println!("WARNING:: THIS FUNCTION IS RECURSIVE");
+        let mut stages_flat = vec![];
+        for stage in &self.stages {
+            match conf_collection.get_pipe(&stage.label) {
+                Some(pipe) =>{
+                    let mut stages = pipe.get_stages(&conf_collection);
+                    stages_flat.append(&mut stages);
+                },
+                None =>{
+                    stages_flat.push(stage.clone());
+                }
+            }
+        }
+        stages_flat
     }
 
     pub fn to_hash(&self) -> BTreeMap<String,Stage> {
